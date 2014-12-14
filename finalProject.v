@@ -39,8 +39,41 @@ Definition colinsert (dbcol : column) (X: nat) (Y: string) : column :=
  | make_col_string header liststring => make_col_string header (Y::liststring)
  end.
 
-Fixpoint insert (dbtable sizeonetable : table) := 
+Fixpoint insert (dbtable sizeonetable : table) : list column := 
  match dbtable with
+ | nil => dbtable
+ | cons h t =>
+  match h with
+  | make_col_nat mainheader mainlistnat =>
+   match sizeonetable with
+   | nil => dbtable
+   | cons oh ot => 
+    match oh with
+    | make_col_nat oheader olistnat =>
+     match olistnat with
+     | _ :: _ :: _ => dbtable
+     | nil => dbtable
+     | cons val nil => (colinsert h val "null")::(insert t ot)
+     end
+    | make_col_string oheader oliststring => dbtable
+    end
+   end
+  | make_col_string mainheader mainliststring =>
+   match sizeonetable with
+   | nil => dbtable
+   | cons oh ot => 
+    match oh with
+    | make_col_string oheader oliststring =>
+     match oliststring with
+     | _ :: _ :: _ => dbtable
+     | nil => dbtable
+     | cons val nil => (colinsert h 0 val)::(insert t ot)
+     end
+    | make_col_nat oheader olistnat => dbtable
+    end
+   end
+  end
+ end.
  
 
 Inductive select (d: db)(l: list column)
