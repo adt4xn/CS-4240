@@ -33,5 +33,14 @@ Definition table := list column.
 (**  database data type. Is essentially just a list of rows  **)
 Definition db := list table.
 
+Definition colinsert (dbcol : column) (X: nat) (Y: string) : column :=
+ match dbcol with
+ | make_col_nat header listnat => make_col_nat header (X::listnat)
+ | make_col_string header liststring => make_col_string header (Y::liststring)
+ end.
+
+Fixpoint insert (dbtable sizeonetable : table) := 
+ match dbtable with
+ 
 
 Inductive select (d: db)(l: list column)
