@@ -108,20 +108,24 @@ Fixpoint beq_str (sa sb : String.string) {struct sb}: bool :=
 Fixpoint dropcolumn(dbtable: table)(s: string) : table :=
   match dbtable with
   | nil => nil
-  | h::t => match h with
+  | cons h t => match h with
             | make_col_string head list =>
-              if (beq_str (get_header_str head) s) then t else dropcolumn t s
-            | make_col_nat h l =>
-              if (beq_str (get_header_str h) s) then t else dropcolumn t s
+              if (beq_str (get_header_str head) s) then t else h::(dropcolumn t s)
+            | make_col_nat hnat lnat =>
+              if (beq_str (get_header_str hnat) s) then t else h::(dropcolumn t s)
 end
 end.
+
+Check (get_header_str header1).
+Compute (get_header_str header1).
+Compute dropcolumn table1 "names".
 
 Fixpoint selectIndex (table: table)(field : string)(value : Type): nat := 
  match table with
  | cons h t => 
   match h with
   | make_col_nat natheader natlist => 
-   if (beq_str natheader field)
+   if (beq_str (get_header_str natheader) field) then 
 
 
 
