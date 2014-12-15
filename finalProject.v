@@ -8,7 +8,7 @@ two possible data types for the entries of this database, nat and string).
 Thus, again, a column is just a list of all the entries in said column. 
 The commands we implement are 
    1. insert - insert a row of data into the table
-   2. select - select a row or column of data to be passed to some other function
+   2. select - select a row of data to be passed to some other function
    3. drop_row - drop a row from the table
    4. drop_column - drop a column from the table   **)
 
@@ -42,19 +42,22 @@ Example column1 := make_col_nat header1 (1::2::3::nil).
 Example column2 := make_col_string header2 ("John"::"Millie"::"Herbert"::nil).
 Example table1 := column1::column2::nil.
 
-Example minicolumn1 := make_col_nat header1 (4::nil).
-Example minicolumn2 := make_col_string header2 ("Roxanne"::nil).
-Example minitable1 := minicolumn1::minicolumn2::nil.
-
 (**  database data type. Is essentially just a list of rows  **)
 Definition db := list table.
 
+(** Insert into a column. If the column is a string type, the function
+will attempt to insert the string parameter. If column is nat, then the nat **)
 Definition colinsert (dbcol : column) (X: nat) (Y: string) : column :=
  match dbcol with
  | make_col_nat header listnat => make_col_nat header (X::listnat)
  | make_col_string header liststring => make_col_string header (Y::liststring)
  end.
 
+Example minicolumn1 := make_col_nat header1 (4::nil).
+Example minicolumn2 := make_col_string header2 ("Roxanne"::nil).
+Example minitable1 := minicolumn1::minicolumn2::nil.
+
+(** Insert a table of size one (such as minitable1, above) into a preexisting table **)
 Fixpoint insert (dbtable sizeonetable : table) : table := 
  match dbtable with
  | nil => dbtable
@@ -93,7 +96,8 @@ Fixpoint insert (dbtable sizeonetable : table) : table :=
 
 Compute insert table1 minitable1.
 
-Fixpoint beq_str (sa sb : String.string) {struct sb}: bool := 
+(** A string equivalency function, necessary for checking names of fields against parameters, found from stack overflow **)
+Fixpoint beq_str (sa sb : string) {struct sb}: bool := 
    match sa, sb with
  | EmptyString, EmptyString  => true
  | EmptyString, String b sb' => false
@@ -104,7 +108,7 @@ Fixpoint beq_str (sa sb : String.string) {struct sb}: bool :=
                                 end
  end.
 
-
+(** Takes in a table and a field name, and drops the column of the given name **)
 Fixpoint dropcolumn(dbtable: table)(s: string) : table :=
   match dbtable with
   | nil => nil
@@ -120,23 +124,127 @@ Check (get_header_str header1).
 Compute (get_header_str header1).
 Compute dropcolumn table1 "names".
 
-Fixpoint selectIndex (table: table)(field : string)(value : Type): nat := 
+(** A helper function for selectWhere. Finds the index of the given value among a list of nats **)
+Fixpoint getNatIndex (natlist: list nat) (value: nat) (index: nat) : nat := 
+  match natlist with
+  | h'::t' => if (beq_nat value h') then index 
+              else getNatIndex t' value (S (index))
+  | nil => index
+  end.
+
+(** A helper function for selectWhere. Finds the index of the given value among a list of strings **)
+Fixpoint getStringIndex (stringlist: list string) (value: string) (index: nat) : nat := 
+  match stringlist with
+  | h'::t' => if (beq_str value h') then index 
+              else getStringIndex t' value (S (index))
+  | nil => index
+  end.
+
+(** A helper function for selectWhere. Calls the two functions above to find the index of the
+given value from the entire table **)
+Fixpoint selectIndex (table: table)(field : string)(natval: nat)(stringval: string): nat := 
  match table with
  | cons h t => 
   match h with
   | make_col_nat natheader natlist => 
-   if (beq_str (get_header_str natheader) field) then 
+   if (beq_str (get_header_str natheader) field) 
+   then getNatIndex natlist natval 0
+   else selectIndex t field natval stringval 
+  | make_col_string stringheader stringlist => 
+   if (beq_str (get_header_str stringheader) field) 
+   then getStringIndex stringlist stringval 0
+   else selectIndex t field natval stringval
+  end
+ | nil => 0
+ end.
 
+(** A helper function for selectWhere. Returns the value, from a list of nats, at a given index. Used to help build
+the return value for selectWhere **)
+Fixpoint natElemAt (list: list nat) (index: nat): nat :=
+ match list with
+ | h::t => match index with
+          | 0 => h
+          | S n => natElemAt t n
+          end
+ | nil => 0
+ end.
 
+(** A helper function for selectWhere. Returns the value, from a list of strings, at a given index. Used to help build
+the return value for selectWhere **)
+Fixpoint stringElemAt (list: list string) (index: nat): string :=
+ match list with
+ | h::t => match index with
+          | 0 => h
+          | S n => stringElemAt t n
+          end
+ | nil => "no valid string"
+ end.
 
+Compute selectIndex table1 "id numbers" 5 "John".
+Compute stringElemAt ("Bob"::"Rick"::"Matt"::nil) 1.
 
+Compute selectIndex table1 "id numbers" 3 "test".
+Compute selectIndex table1 "names" 3 "Herbert".
 
+(** selectWhere. Takes in the full table, a second table (to recurse over), the field, a natval and a stringval. 
+The function will only use one of the natval or stringval, depending on the given field's type. **)
 
+Fixpoint selectWhere (table: table)(rec_table: list column)(field: string)(natval: nat)(stringval: string): list column := 
+ match rec_table with
+ | cons h t => 
+  match h with
+  | make_col_nat natheader natlist => 
+                 make_col_nat natheader ((natElemAt natlist (selectIndex table field natval stringval))::nil)::(selectWhere table t field natval stringval)
+  | make_col_string stringheader stringlist => 
+                 make_col_string stringheader ((stringElemAt stringlist (selectIndex table field natval stringval))::nil)::(selectWhere table t field natval stringval)
+  end
+ | nil => nil
+ end.
 
+Compute selectWhere table1 table1 "id numbers" 3 "test".
+(** Two of the same tables are initially passed in to the function for the following reason:
+ in 'Compute selectWhere table1 table1 "id numbers" 3 "Millie"' above, we iterate over the columns in the second
+table1, replacing them with columns of height=1. This changes the index of id number 3 from 2 to 0 in the resulting table, 
+and thus, we would end up using the name at index 0... not the one we want. By supplying a second table to the function,
+we have an unaltered reference from which we can derive the proper indicies. **)
 
+(** helper function for the merge command that takes two columns and checks to see if
+they have the same header. If they do, they will be combined into one column in the merge
+function that follows **)
 
+Definition combine_cols(c1 c2: column) : column :=
+  match c1, c2 with
+  | make_col_nat h1 l1, make_col_nat h2 l2 =>
+        if (beq_str (get_header_str h1)(get_header_str h2)) then make_col_nat h1 (l1++l2)
+        else c1
+  | make_col_string h1 l1, make_col_string h2 l2 =>
+        if (beq_str (get_header_str h1)(get_header_str h2)) then make_col_string h1 (l1++l2)
+        else c1
+  | make_col_nat _ _, make_col_string _ _ => c1
+  | make_col_string _ _, make_col_nat _ _ => c1
+end.
 
+(** Merge command. Takes two tables and combines columns of the two seperate tables
+ that have the same header **)
 
+Fixpoint merge (t1 t2: table) : table :=
+  match t1, t2 with
+    | nil, nil => nil
+    | nil, _ => t2
+    | _, nil => t1
+    | h::t, h'::t' => 
+      match h, h' with
+      | make_col_nat h1 l1, make_col_nat h2 l2 => (combine_cols h h')::(merge t t')
+      | make_col_string h1 l1, make_col_string h2 l2 => (combine_cols h h')::(merge t t')
+      | make_col_string _ _, make_col_nat _ _ => merge t t'
+      | make_col_nat _ _, make_col_string _ _ => merge t t'
+end
+end.
+
+Example table2 := column1::column2::nil.
+Compute merge table1 table2.
+
+Compute dropcolumn table1 "id numbers".
 
 
 
