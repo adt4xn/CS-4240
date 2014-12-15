@@ -250,6 +250,8 @@ table will be in one table.  **)
 
 Compute merge table1 table2.
 
+(** This will drop the column titled "id numbers" from table1. As a result
+table1 will be left with one column, "names" **)
 Compute dropcolumn table1 "id numbers".
 
 
