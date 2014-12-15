@@ -242,6 +242,12 @@ end
 end.
 
 Example table2 := column1::column2::nil.
+
+(** This should merge the columns of table1 and table2 that have the same
+headings. Thus, there will be the same number of columns in the resulting
+table as the two that are being merged, but all of the data from each
+table will be in one table.  **)
+
 Compute merge table1 table2.
 
 Compute dropcolumn table1 "id numbers".
