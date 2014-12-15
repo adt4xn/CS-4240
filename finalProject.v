@@ -10,7 +10,8 @@ The commands we implement are
    1. insert - insert a row of data into the table
    2. select - select a row of data to be passed to some other function
    3. drop_row - drop a row from the table
-   4. drop_column - drop a column from the table   **)
+   4. drop_column - drop a column from the table   
+   5. merge - merges two tables    **)
 
 Require Export List.
 Require Export String.
@@ -255,8 +256,6 @@ table1 will be left with one column, "names" **)
 Compute dropcolumn table1 "id numbers".
 
 
-
-(* adam *)
 
 
 
