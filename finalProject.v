@@ -248,7 +248,7 @@ Compute dropcolumn table1 "id numbers".
 
 
 
-
+(* adam *)
 
 
 
